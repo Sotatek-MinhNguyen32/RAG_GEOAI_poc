@@ -1,0 +1,75 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam Style strictuml
+skinparam MaxMessageSize 250
+
+!define COLOR_INTERFACE #34495e
+!define COLOR_LOGIC #2980b9
+!define COLOR_EVAL #8e44ad
+!define COLOR_OUT #27ae60
+!define COLOR_DB #ff9800
+!define COLOR_SHARED #e74c3c
+
+actor "Chat frame" as Client
+
+box "1. Geo-RAG MCP Server (Core Logic)" #f4f6f7
+    participant "MCP Controller\n(Orchestrator)" as Ctrl COLOR_INTERFACE
+    participant "QA & Geo-NER" as QA COLOR_LOGIC
+    participant "Fusion\n(RRF & Cross-Encoder)" as Fusion COLOR_LOGIC
+    participant "Quality Manager" as QM COLOR_EVAL
+    participant "Metadata Assembler" as FMT COLOR_OUT
+end box
+
+box "2. Shared Services" #fdfefe
+    participant "Embedding API" as Embed COLOR_SHARED
+end box
+
+box "3. Databases" #fff3e0
+    database "Qdrant\n(Vector)" as QD COLOR_DB
+    database "Elasticsearch\n(Keyword)" as ES COLOR_DB
+end box
+
+Client -> Ctrl : 1. Submit JSON Payload
+activate Ctrl
+
+Ctrl -> QA : 2. Parse Payload
+activate QA
+QA -->> Ctrl : Return "Clean Query" & "Filters"
+deactivate QA
+
+par Branch A: Semantic Search
+    Ctrl -> Embed : 3a. Encode "Clean Query"
+    activate Embed
+    Embed -->> Ctrl : Return Query Vector
+    deactivate Embed
+    
+    Ctrl -> QD : 4a. Vector Search
+    activate QD
+    QD -->> Ctrl : Top-K Semantic Docs
+    deactivate QD
+else Branch B: Lexical & Geo Search
+    Ctrl -> ES : 3b. Keyword/Filter Search
+    activate ES
+    ES -->> Ctrl : Top-K Lexical Docs
+    deactivate ES
+end
+
+Ctrl -> Fusion : 5. Pass Both Candidate Lists
+activate Fusion
+Fusion -> Fusion : Rank (RRF + Cross-Encoder)
+Fusion -->> Ctrl : Return Ranked Results
+deactivate Fusion
+
+Ctrl -> QM : 6. Validate Quality
+activate QM
+QM -->> Ctrl : Quality Passed
+deactivate QM
+
+Ctrl -> FMT : 7. Format Final Output
+activate FMT
+FMT -->> Ctrl : JSON (Image-Metadata)
+deactivate FMT
+
+Ctrl -->> Client : 8. Output Response
+deactivate Ctrl
+@enduml

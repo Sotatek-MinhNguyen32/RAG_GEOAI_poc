@@ -1,0 +1,78 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam Style strictuml
+skinparam MaxMessageSize 250
+
+!define COLOR_S3 #FFA500
+!define COLOR_JOB_CLIENT #0066FF
+!define COLOR_QUEUE #70AD47
+!define COLOR_AI #FF3333
+!define COLOR_ES_QD #E28743
+!define COLOR_MAIN_BOX #F8FBFF
+
+' Participants based on Screen 2026-02-26
+participant "S3 Storage" as S3 COLOR_S3
+
+box "Main Process Service (Container)" COLOR_MAIN_BOX
+    participant "Create job\nclient" as CJC COLOR_JOB_CLIENT
+    queue "Job Queue" as JQ COLOR_QUEUE
+    
+    box "Job (batch)" #F0F8FF
+        participant "Worker Logic" as WRK #SkyBlue
+    end box
+end box
+
+participant "VLM service" as VLM COLOR_AI
+database "Elastic search" as ES COLOR_ES_QD
+participant "Embedding service" as EMB COLOR_AI
+database "Qdrant" as QD COLOR_ES_QD
+
+== Phase 1: Job Initialization (Batch Trigger) ==
+' Start by fetching list from S3
+CJC -> S3 : 1. get list data
+activate S3
+S3 -->> CJC : list data
+deactivate S3
+
+' Push jobs to queue based on list
+CJC -> JQ : 2. push job
+activate JQ
+
+== Phase 2: Processing (Sequential Flow) ==
+JQ -> WRK : 4. Get data (Trigger)
+deactivate JQ
+activate WRK
+
+WRK -> S3 : fetch (IMG+XML)
+activate S3
+S3 -->> WRK : return data
+deactivate S3
+
+WRK -> WRK : 5. XML extract
+
+' Step 6: VLM & Elasticsearch storage
+WRK -> VLM : 6. Get desc img (IMG)
+activate VLM
+VLM -->> WRK : desc img (text)
+deactivate VLM
+
+WRK -> ES : store document
+activate ES
+ES -->> WRK : ack
+deactivate ES
+
+' Step 7 & 8: Embedding & Qdrant storage
+WRK -> EMB : 7. Get embedding (text)
+activate EMB
+EMB -->> WRK : vector embed
+deactivate EMB
+
+WRK -> WRK : 8. Update payload
+
+WRK -> QD : store payload
+activate QD
+QD -->> WRK : ack
+deactivate QD
+
+deactivate WRK
+@enduml

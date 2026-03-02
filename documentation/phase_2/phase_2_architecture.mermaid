@@ -1,0 +1,61 @@
+flowchart LR
+    %% --- COLOR CLASS DEFINITIONS ---
+    classDef logic fill:#2980b9,stroke:#2471a3,stroke-width:2px,color:#fff;
+    classDef evaluate fill:#8e44ad,stroke:#7d3c98,stroke-width:2px,color:#fff;
+    classDef interface fill:#34495e,stroke:#2c3e50,stroke-width:2px,color:#fff;
+    classDef output fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff;
+    classDef storage fill:#ff9800,stroke:#e65100,stroke-width:2px,color:#000;
+    classDef shared fill:#e74c3c,stroke:#c0392b,stroke-width:3px,color:#fff;
+
+    %% ==========================================
+    %% BLOCK 1: MCP RAG CORE
+    %% ==========================================
+    subgraph MCP_Core ["1. Geo-RAG MCP Server (Core Logic)"]
+        direction LR
+        Input["MCP Interface<br/>(JSON Payload)"]:::interface --> QA["Query Analyzer<br/>& Geo-NER"]:::logic
+
+        QA -- "1. Text" --> ToShared((" &nbsp;&nbsp;&nbsp;Send&nbsp;&nbsp;&nbsp;<br/>&nbsp;&nbsp;&nbsp;Text&nbsp;&nbsp;&nbsp; ")):::logic
+        FromShared((" &nbsp;&nbsp;Receive&nbsp;&nbsp;<br/>&nbsp;&nbsp;Vector&nbsp;&nbsp; ")):::logic --> Vector_Client["Qdrant Client"]:::logic
+        QA -- "2. Filters" --> ES_Client["ES Client"]:::logic
+
+        FromDB_QD((" &nbsp;&nbsp;Top K&nbsp;&nbsp;<br/>&nbsp;&nbsp;IDs&nbsp;&nbsp; ")):::logic --> Fusion["RRF & Cross-Encoder"]:::logic
+        FromDB_ES((" &nbsp;&nbsp;Top K&nbsp;&nbsp;<br/>&nbsp;&nbsp;Docs&nbsp;&nbsp; ")):::logic --> Fusion
+
+        Fusion --> Quality_Manager["Quality Manager"]:::evaluate
+        Quality_Manager --> Formatter["Metadata Assembler"]:::output
+        Formatter --> Out["Return JSON<br/>(Image-Metadata)"]:::interface
+    end
+
+    %% ==========================================
+    %% BLOCK 2: SHARED SERVICE
+    %% ==========================================
+    subgraph Shared_Service ["2. Shared Services"]
+        direction TB
+        Shared_Embed["Shared Embedding API<br/>(Jina v4)"]:::shared
+    end
+
+    %% ==========================================
+    %% BLOCK 3: DATABASES (FROM OFFLINE)
+    %% ==========================================
+    subgraph Storage_Final ["3. DB (Offline Process)"]
+        direction TB
+        ES_DB[("Elasticsearch<br/>(Metadata)")]:::storage
+        QD_DB[("Qdrant<br/>(Vectors)")]:::storage
+    end
+
+    %% ==========================================
+    %% INTER-BLOCK CONNECTIONS
+    %% ==========================================
+    ToShared -. "Network Call" .-> Shared_Embed
+    Shared_Embed -. "Return Array" .-> FromShared
+
+    Vector_Client -- "Semantic Search" --> QD_DB
+    ES_Client -- "Keyword/Filter Search" --> ES_DB
+
+    QD_DB -. "JSON" .-> FromDB_QD
+    ES_DB -. "JSON" .-> FromDB_ES
+
+    %% Subgraph styling
+    style MCP_Core fill:#f4f6f7,stroke:#2c3e50,stroke-width:2px
+    style Shared_Service fill:#fdfefe,stroke:#c0392b,stroke-width:2px,stroke-dasharray: 5 5
+    style Storage_Final fill:#fff3e0,stroke:#e65100,stroke-width:2px
