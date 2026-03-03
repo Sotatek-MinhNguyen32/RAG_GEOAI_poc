@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # ── Qdrant Configurations ──
     QDRANT_URL: str
     QDRANT_COLLECTION: str
+    QDRANT_COLLECTION_SIZE: int
 
     # ── Redis Configurations ──
     REDIS_URL: str

@@ -1,8 +1,11 @@
 from shared.core.es_client import es_client
+from shared.core.qdrant_client import qdrant_client
+
 from shared.core.config import settings
+from qdrant_client.models import VectorParams, Distance
 
 
-def ensure_index_elasticsearch():
+def init_elasticsearch():
     client = es_client
 
     if client.indices.exists(index=settings.ES_INDEX):
@@ -78,3 +81,57 @@ def ensure_index_elasticsearch():
     )
 
     print(f"Created production-ready index '{settings.ES_INDEX}'")
+
+
+def init_qdrant():
+    """Create Qdrant collection if not exists and validate vector size"""
+    try:
+        collection_name = settings.QDRANT_COLLECTION
+        vector_size = settings.QDRANT_VECTOR_SIZE
+
+        collections = qdrant_client.get_collections()
+        existing = next(
+            (c for c in collections.collections if c.name == collection_name), None
+        )
+
+        if existing:
+            # Validate vector size
+            info = qdrant_client.get_collection(collection_name)
+            current_size = info.config.params.vectors.size
+
+            if current_size != vector_size:
+                raise ValueError(
+                    f"Vector size mismatch: existing={current_size}, expected={vector_size}"
+                )
+
+            print(
+                f"Qdrant collection '{collection_name}' already exists "
+                f"({current_size}-dim)"
+            )
+            return
+
+        # Create collection
+        qdrant_client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(
+                size=vector_size,
+                distance=Distance.COSINE,
+            ),
+        )
+
+        print(
+            f"Created Qdrant collection '{collection_name}' "
+            f"({vector_size}-dim, COSINE)"
+        )
+
+    except Exception as e:
+        print(f"Failed to create Qdrant collection: {e}")
+        raise
+
+
+def main():
+    print("Initializing Elasticsearch index...")
+    init_elasticsearch()
+    print("Initializing Qdrant collection...")
+    init_qdrant()
+    print("Database initialization complete.")
