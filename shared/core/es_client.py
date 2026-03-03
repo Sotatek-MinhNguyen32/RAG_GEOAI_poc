@@ -33,7 +33,7 @@ class OpenSearchService:
             return
 
         if mode == "prod":
-            region = os.environ["AWS_REGION"]
+            region = os.environ["OPENSEARCH_REGION"]
             credentials = boto3.Session().get_credentials()
             frozen_credentials = credentials.get_frozen_credentials()
 

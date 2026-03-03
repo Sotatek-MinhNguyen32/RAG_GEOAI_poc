@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     OPENSEARCH_HOST: str
     OPENSEARCH_PORT: int
     OPENSEARCH_MODE: str = "dev"
+    OPENSEARCH_REGION: str = "us-east-1"
 
     # ── Qdrant Configurations ──
     QDRANT_URL: str
