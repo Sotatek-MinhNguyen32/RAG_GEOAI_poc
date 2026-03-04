@@ -57,3 +57,6 @@ celerybeat.pid
 *.bak
 *.tmp
 .cache/
+
+# ── Local mock files (chỉ dùng để test local, không push lên remote) ──
+**/mock_*.py
