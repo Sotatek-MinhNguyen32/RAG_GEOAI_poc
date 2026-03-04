@@ -9,66 +9,131 @@ Một dự án, hai phase:
 
 Shared code nằm ở `shared/`.
 
+---
+
 ## Setup local
 
 ```bash
 cp .env.example .env
-docker compose up -d        # ES, Qdrant, Redis, MinIO
+docker compose up -d          # khởi động ES, Qdrant, Redis, MinIO
+
+# Init databases (tạo ES index + Qdrant collection)
+python services/scripts/init_db.py
+
+# Upload ảnh mẫu từ ./data lên MinIO
+python services/scripts/upload_data.py
+
+# Khởi động Celery worker (terminal riêng)
+celery -A services.worker.celery_app worker --loglevel=info
+
+# Đẩy job xử lý toàn bộ ảnh (--limit để test nhanh)
+python services/scripts/start_pipeline.py --limit 5
 ```
 
+---
 
-# Role Assignments
-
-## Cấu trúc repo
+## Cấu trúc repo & chỗ code vào
 
 ```
-poc_RAG_GEOAI/
-├── shared/                      ← code dùng chung (config, schemas, clients)
-├── services/                    ← Phase 1: ingestion pipeline
-│   ├── api/                     ← API nhận file, tạo job
-│   ├── worker/                  ← Celery worker xử lý ảnh
-│   ├── scripts/                 ← init DB, seed data
-│   └── docker-compose.yml       ← ES, Qdrant, Redis, MinIO
-├── mcp/                         ← Phase 2: MCP search server
-│   ├── engines/                 ← semantic search, keyword search
-│   ├── fusion/                  ← RRF, quality check
-│   └── docker-compose.yml       ← ES, Qdrant
-└── documentation/               ← diagrams, tasklist
+RAG_GEOAI_poc/
+│
+├── shared/                          ← code dùng chung — đổi gì báo cả team
+│   ├── config.py                    ← Settings (env vars) cho pipeline chính
+│   ├── clients.py                   ← ES client, Qdrant client, S3 client
+│   ├── schemas.py                   ← Pydantic schemas dùng chung (SearchResult…)
+│   └── core/                        ← Config/client cho OpenSearch (AWS prod)
+│       ├── config.py                ← Settings với OPENSEARCH_* + QDRANT_COLLECTION_SIZE
+│       ├── es_client.py             ← OpenSearchService (dev/prod switching)
+│       └── qdrant_client.py         ← QdrantService singleton
+│
+├── services/                        ← Phase 1: Ingestion pipeline
+│   ├── requirements.txt             ← Dependencies cho toàn bộ services/
+│   │
+│   ├── scripts/                     ← One-time scripts (chạy tay)
+│   │   ├── init_db.py               ← [Task #3] Tạo ES index + Qdrant collection
+│   │   ├── upload_data.py           ← Upload ảnh từ ./data lên MinIO
+│   │   ├── start_pipeline.py        ← [Task #2] Dispatch Celery jobs từ S3
+│   │   └── models/
+│   │       └── metadata_schema.py   ← [Task #3] Pydantic schema cho geospatial metadata
+│   │
+│   ├── api/                         ← [Task #2] FastAPI — nhận file, tạo job
+│   │   ├── main.py                  ← App FastAPI entry point
+│   │   └── v1/
+│   │       └── ingest.py            ← POST /upload, GET /jobs/{id}
+│   │
+│   └── worker/                      ← [Task #1 + #6] Celery worker
+│       ├── celery_app.py            ← [Task #1] Celery app + Redis broker config
+│       ├── tasks.py                 ← [Task #6] Task process_image (full pipeline)
+│       └── processors/              ← [Task #6] Các bước xử lý trong pipeline
+│           ├── storage.py           ← Download/upload S3
+│           ├── xml_extractor.py     ← Parse .jpg.aux.xml → metadata
+│           ├── vlm.py               ← [Task #5] Gọi Qwen VLM → text description
+│           ├── embed.py             ← [Task #4] Gọi Jina API → embedding vector
+│           ├── index_service.py     ← [Task #7] Lưu doc vào Elasticsearch
+│           ├── qdrant_service.py    ← [Task #8] Upsert vector vào Qdrant
+│           ├── mock_vlm.py          ← Mock VLM (dùng khi chưa có server)
+│           └── mock_embed.py        ← Mock Embed (dùng khi chưa có server)
+│
+├── mcp/                             ← Phase 2: Search server
+│   ├── controller.py                ← Entry point MCP server
+│   ├── engines/
+│   │   ├── semantic.py              ← [Task #9] Qdrant vector search (Thành Ngô)
+│   │   └── keyword.py               ← [Task #10] ES BM25 + geo filter (Tư Nguyễn)
+│   └── fusion/
+│       ├── rrf.py                   ← [Task #11] Reciprocal Rank Fusion
+│       ├── cross_encoder.py         ← [Task #11] Re-ranking
+│       ├── quality.py               ← [Task #11] Quality gate
+│       ├── formatter.py             ← Format kết quả trả về
+│       └── pipeline.py              ← [Task #11] Orchestrate toàn bộ search flow
+│
+├── docker-compose.yml               ← Infra local: ES 8.15, Qdrant, Redis, MinIO
+├── .env.example                     ← Copy → .env rồi điền giá trị
+└── documentation/
+    ├── tasklist.md                  ← Task list + phân công
+    └── phase_1/, phase_2/           ← Flow diagram, sequence diagram
 ```
 
-## Role
+---
+
+## Phân công theo từng task
 
 ### Minh Nguyễn
-| Folder | Việc |
-|--------|------|
-| `services/worker/` | Celery pipeline: S3 → XML → VLM → ES → Embed → Qdrant |
-| `mcp/fusion/` | RRF fusion + quality check |
-| `mcp/main.py` | Orchestrator search pipeline |
+| Task | File cần code vào |
+|------|-------------------|
+| #1 — Celery setup | `services/worker/celery_app.py` ✅ |
+| #6 — Worker AI pipeline | `services/worker/tasks.py` + `processors/` ✅ |
+| #8 — Lưu vector Qdrant | `services/worker/processors/qdrant_service.py` ✅ |
+| #11 — RRF + LLM fusion | `mcp/fusion/rrf.py`, `cross_encoder.py`, `pipeline.py` |
 
 ### Tư Nguyễn
-| Folder | Việc |
-|--------|------|
-| `services/api/` | FastAPI: list S3, tạo job, check status |
-| `services/worker/processors/` | VLM client + Embed client |
-| `mcp/engines/keyword.py` | ES keyword search |
+| Task | File cần code vào |
+|------|-------------------|
+| #2 — API S3 + tạo job | `services/api/v1/ingest.py` + `services/scripts/start_pipeline.py` |
+| #4 — Jina Embed client | `services/worker/processors/embed.py` *(chờ EC2 endpoint)* |
+| #5 — Qwen VLM client | `services/worker/processors/vlm.py` *(chờ GPU EC2 endpoint)* |
+| #7 — Index vào ES | `services/worker/processors/index_service.py` ✅ |
+| #10 — Lexical & Geo search | `mcp/engines/keyword.py` |
 
 ### Thành Ngô
-| Folder | Việc |
-|--------|------|
-| `services/scripts/` | ES index mapping, Qdrant collection init |
-| `mcp/engines/semantic.py` | Qdrant vector search + cross-ref ES |
+| Task | File cần code vào |
+|------|-------------------|
+| #3 — ES/OpenSearch config | `shared/core/` + `services/scripts/init_db.py` + `services/scripts/models/metadata_schema.py` ✅ |
+| #9 — Semantic search | `mcp/engines/semantic.py` |
 
-### Chung (cả 3)
-| Folder | Ghi chú |
-|--------|---------|
-| `shared/` | Đổi gì thì báo team |
+> **Lưu ý Task #4 & #5:** Hiện tại `mock_embed.py` và `mock_vlm.py` đang được dùng thay thế.
+> Khi khách cung cấp endpoint EC2, chỉ cần điền `EMBED_URL` và `VLM_URL` vào `.env` rồi đặt `USE_MOCK=False`.
 
-## Dependency
+---
+
+## Dependency giữa các task
 
 ```
-Tư: API ──push job──► Minh: Worker ──► ES + Qdrant
-                         ├── Tư: VLM/Embed client
-                         └── Thành: ES mapping
+Tư (#2): API/start_pipeline ──► Minh (#6): Worker ──► ES + Qdrant
+                                    ├── Tư (#4, #5): VLM/Embed clients
+                                    ├── Tư (#7): index_service.py
+                                    └── Thành (#3): ES mapping/init
 
-Thành: Semantic ──► Minh: Fusion ◄── Tư: Keyword
+Thành (#9): semantic.py ──►
+                            Minh (#11): fusion/pipeline.py
+Tư (#10):  keyword.py  ──►
 ```
