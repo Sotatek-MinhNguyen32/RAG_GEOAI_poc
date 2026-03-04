@@ -1,0 +1,25 @@
+# ── Core ──
+celery>=5.3,<6
+redis>=5.0,<6
+pydantic>=2.0,<3
+pydantic-settings>=2.0,<3
+
+# ── S3 / MinIO ──
+boto3>=1.34,<2
+
+# ── Databases ──
+elasticsearch>=8.0,<9
+opensearch-py>=2.0,<4
+requests-aws4auth>=1.2,<2
+qdrant-client>=1.9,<2
+
+# ── HTTP client ──
+httpx>=0.27,<1
+
+# ── Image processing ──
+Pillow>=10.0,<11
+
+# ── API ──
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+python-multipart>=0.0.7,<1

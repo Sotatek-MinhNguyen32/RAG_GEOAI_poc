@@ -1,4 +1,59 @@
+# ── Python ──
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual env ──
+.venv/
+venv/
+env/
+ENV/
+
+# ── Sensitive / Secrets ──
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.secret
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ──
 .DS_Store
+Thumbs.db
+
+# ── Docker ──
+*.log
+docker-compose.override.yml
+
+# # ── Data / Large files ──
+# *.jpg
+# *.jpeg
+# *.png
+# *.tif
+# *.tiff
+# *.ovr
+# *.wld
+# data/
+
+# ── Celery ──
+celerybeat-schedule
+celerybeat.pid
+
+# ── Misc ──
+*.bak
+*.tmp
+.cache/

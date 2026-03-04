@@ -23,4 +23,4 @@
 | 8 | Ingestion | Lưu vector vào Qdrant | 0.5 | 0.5 | 0 | Lưu vector phục vụ semantic search | Minh Nguyễn |
 | 9 | Search | Branch A: Semantic Search | 1 | 0 | 0 | Embedding query → Qdrant Top-K | Thành Ngô |
 | 10 | Search | Branch B: Lexical & Geo Search | 1 | 0 | 0 | Tìm kiếm bằng Elasticsearch | Tư Nguyễn |
-| 11 | Search | Hợp nhất kết quả bằng RRF + gọi LLM | 1 | 0 | 0 | Logic Hybrid RAG | Minh Nguyễn |
+| 11 | Search | Hợp nhất kết quả bằng RRF + cross Encoder | 1 | 0 | 0 | Logic Hybrid RAG | Minh Nguyễn |
