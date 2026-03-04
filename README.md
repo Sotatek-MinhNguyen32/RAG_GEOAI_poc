@@ -70,9 +70,7 @@ RAG_GEOAI_poc/
 │           ├── vlm.py               ← [Task #5] Gọi Qwen VLM → text description
 │           ├── embed.py             ← [Task #4] Gọi Jina API → embedding vector
 │           ├── index_service.py     ← [Task #7] Lưu doc vào Elasticsearch
-│           ├── qdrant_service.py    ← [Task #8] Upsert vector vào Qdrant
-│           ├── mock_vlm.py          ← Mock VLM (dùng khi chưa có server)
-│           └── mock_embed.py        ← Mock Embed (dùng khi chưa có server)
+           └── qdrant_service.py    ← [Task #8] Upsert vector vào Qdrant
 │
 ├── mcp/                             ← Phase 2: Search server
 │   ├── controller.py                ← Entry point MCP server
@@ -119,9 +117,6 @@ RAG_GEOAI_poc/
 |------|-------------------|
 | #3 — ES/OpenSearch config | `shared/core/` + `services/scripts/init_db.py` + `services/scripts/models/metadata_schema.py` ✅ |
 | #9 — Semantic search | `mcp/engines/semantic.py` |
-
-> **Lưu ý Task #4 & #5:** Hiện tại `mock_embed.py` và `mock_vlm.py` đang được dùng thay thế.
-> Khi khách cung cấp endpoint EC2, chỉ cần điền `EMBED_URL` và `VLM_URL` vào `.env` rồi đặt `USE_MOCK=False`.
 
 ---
 
