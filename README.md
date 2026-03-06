@@ -159,3 +159,56 @@ Thành (#9): semantic.py ──►
                             Minh (#11): fusion/pipeline.py
 Tư (#10):  keyword.py  ──►
 ```
+---
+
+## Current Status (Latest Run)
+
+ ✅ **COMPLETED:**
+- All core infrastructure code implemented (Celery, ES, Qdrant, Worker, VLM/Embed APIs)
+- Real Qwen VLM and Jina Embedding APIs integrated  
+- Boto3 S3 client configured for MinIO compatibility
+- Docker environment fully configured with service networking
+
+🔄 **CURRENT WORK:**
+- Fixed boto3 endpoint validation issues with MinIO
+- Updated docker-compose.yml with proper environment variable overrides for Docker service discovery
+- All S3 interaction code (storage.py, upload_data.py, start_pipeline.py) updated for boto3 API
+- Database initialization scripts ready
+
+### Quick Test Run
+
+```bash
+# Start everything
+docker compose -f services/docker-compose.yml up -d
+
+# Initialize databases
+PYTHONPATH=. conda run -n agent python services/scripts/init_db.py
+
+# Upload sample data to MinIO  
+PYTHONPATH=. conda run -n agent python services/scripts/upload_data.py
+
+# Start Celery worker in a separate terminal
+PYTHONPATH=. conda run -n agent celery -A services.worker.celery_app worker -l info
+
+# Queue 1 image for processing
+PYTHONPATH=. conda run -n agent python services/scripts/start_pipeline.py --limit 1
+
+# Check results after 30 seconds
+curl http://localhost:9200/images_metadata/_count | jq .count
+curl http://localhost:6333/collections/desc_embed | jq '.result.points_count'
+```
+
+### Known Issues & Solutions
+
+**Issue:** Bucket policy script fails with boto3
+- **Solution:** Skip for local dev (direct URLs work fine with public bucket)
+
+**Issue:** Docker worker can't access MinIO  
+- **Fix:** Using `geo_minio:9000` (Docker service DNS) in docker-compose environment overrides instead of localhost
+
+**Clean rebuild if issues:**
+```bash
+docker compose -f services/docker-compose.yml down -v
+docker system prune -f
+docker compose -f services/docker-compose.yml up -d --build
+```
