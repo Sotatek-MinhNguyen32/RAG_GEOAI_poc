@@ -19,6 +19,7 @@ docker compose up -d          # khởi động ES, Qdrant, Redis, MinIO
 ```
 
 ## RUN FLOW (from data in root -> push data in Minio -> process -> store in ES + Qdrant)
+```bash
 # Init databases (tạo ES index + Qdrant collection)
 python services/scripts/init_db.py
 
