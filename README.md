@@ -11,44 +11,46 @@ Shared code nằm ở `shared/`.
 
 ---
 
-## Setup local 
+## Quick Start (fresh run — 1 lệnh duy nhất)
 
 ```bash
-cp .env.example .env
-docker compose up -d          # khởi động ES, Qdrant, Redis, MinIO
+# Đảm bảo không có local Celery worker nào đang chạy trước
+pkill -9 -f celery 2>/dev/null; \
+docker compose -f services/docker-compose.yml down -v && \
+docker compose -f services/docker-compose.yml up -d && \
+sleep 15 && \
+PYTHONPATH=. conda run -n agent python services/scripts/setup_all.py
 ```
 
-## RUN FLOW (from data in root -> push data in Minio -> process -> store in ES + Qdrant)
+Script `setup_all.py` tự động:
+1. Chờ tất cả services healthy
+2. Tạo ES index + Qdrant collection
+3. Upload 24 files từ `./data` → MinIO (bucket public-read)
+4. Đẩy 12 jobs → Celery worker (Docker)
+
+### Kiểm tra kết quả
 
 ```bash
-# Init databases (tạo ES index + Qdrant collection)
-conda run -n agent python services/scripts/init_db.py
-
-# Init MinIO bucket policy (cho phép public view ảnh)
-conda run -n agent python services/scripts/init_bucket_policy.py
-
-# Upload ảnh mẫu từ ./data lên MinIO
-conda run -n agent python services/scripts/upload_data.py
-
-# Khởi động Celery worker (terminal riêng)
-conda run -n agent celery -A services.worker.celery_app worker --loglevel=info
-
-# Đẩy job xử lý toàn bộ ảnh (--limit để test nhanh)
-conda run -n agent python services/scripts/start_pipeline.py --limit 5
+# Sau ~30 giây
+curl -s http://localhost:9200/images_metadata/_count | python3 -c "import sys,json; print('ES docs:', json.load(sys.stdin)['count'])"
+curl -s http://localhost:6333/collections/desc_embed | python3 -c "import sys,json; print('Qdrant vectors:', json.load(sys.stdin)['result']['points_count'])"
 ```
 
-> **Qdrant sẽ show ảnh:** 
-> - URL format: `http://localhost:9000/warehouse/{image_id}`
-> - Được lưu trong Qdrant payload → có thể click xem ảnh trực tiếp
+> **Qdrant image URLs:** `http://localhost:9000/warehouse/{image_id}` — click xem ảnh trực tiếp
 
-## Real APIs
+---
 
-- **VLM (Qwen):** `http://13.231.114.91:8001/v1/chat/completions` → Image → Description
-- **Embedding (Jina):** `http://13.231.181.57:8000/v1/embeddings` → Text → 2048-dim vector
+## APIs
 
-# Đẩy job xử lý toàn bộ ảnh (--limit để test nhanh)
-python services/scripts/start_pipeline.py --limit 5
-```
+| Service | URL | Ghi chú |
+|---------|-----|---------|
+| VLM (Qwen) | `http://13.231.114.91:8001/v1/chat/completions` | Image → text description |
+| Embedding (Jina) | `http://13.231.181.57:8000/v1/embeddings` | Text → 2048-dim vector |
+| MinIO UI | `http://localhost:9001` | Xem files đã upload |
+| Qdrant UI | `http://localhost:6333/dashboard` | Xem vectors + payloads |
+| Redis Insight | `http://localhost:8001` | Monitor task queue |
+
+> **Mock mode** (khi API không khả dụng): set `USE_MOCK=True` trong `.env.docker`
 
 ---
 
@@ -161,54 +163,23 @@ Tư (#10):  keyword.py  ──►
 ```
 ---
 
-## Current Status (Latest Run)
+## Current Status
 
- ✅ **COMPLETED:**
-- All core infrastructure code implemented (Celery, ES, Qdrant, Worker, VLM/Embed APIs)
-- Real Qwen VLM and Jina Embedding APIs integrated  
-- Boto3 S3 client configured for MinIO compatibility
-- Docker environment fully configured with service networking
+✅ **Phase 1 — Ingestion pipeline hoàn chỉnh:**
+- Docker worker xử lý 12/12 ảnh thành công (ES + Qdrant đều có 12 docs)
+- Qdrant payload URL đúng: `http://localhost:9000/warehouse/{image_id}` (click xem ảnh được)
+- Bucket MinIO public-read (không cần presigned URL)
+- Mock mode hoạt động khi VLM/Embed API không khả dụng
 
-🔄 **CURRENT WORK:**
-- Fixed boto3 endpoint validation issues with MinIO
-- Updated docker-compose.yml with proper environment variable overrides for Docker service discovery
-- All S3 interaction code (storage.py, upload_data.py, start_pipeline.py) updated for boto3 API
-- Database initialization scripts ready
+🔄 **Phase 2 — Search pipeline:** đang triển khai (`mcp/`)
 
-### Quick Test Run
+---
+
+## Lưu ý quan trọng
+
+> **KHÔNG chạy local Celery worker** khi dùng Docker stack — sẽ cạnh tranh task với `geo_worker` container trên cùng Redis queue, dẫn đến tasks bị phân chia ngẫu nhiên.
 
 ```bash
-# Start everything
-docker compose -f services/docker-compose.yml up -d
-
-# Initialize databases
-PYTHONPATH=. conda run -n agent python services/scripts/init_db.py
-
-# Upload sample data to MinIO  
-PYTHONPATH=. conda run -n agent python services/scripts/upload_data.py
-
-# Start Celery worker in a separate terminal
-PYTHONPATH=. conda run -n agent celery -A services.worker.celery_app worker -l info
-
-# Queue 1 image for processing
-PYTHONPATH=. conda run -n agent python services/scripts/start_pipeline.py --limit 1
-
-# Check results after 30 seconds
-curl http://localhost:9200/images_metadata/_count | jq .count
-curl http://localhost:6333/collections/desc_embed | jq '.result.points_count'
-```
-
-### Known Issues & Solutions
-
-**Issue:** Bucket policy script fails with boto3
-- **Solution:** Skip for local dev (direct URLs work fine with public bucket)
-
-**Issue:** Docker worker can't access MinIO  
-- **Fix:** Using `geo_minio:9000` (Docker service DNS) in docker-compose environment overrides instead of localhost
-
-**Clean rebuild if issues:**
-```bash
-docker compose -f services/docker-compose.yml down -v
-docker system prune -f
-docker compose -f services/docker-compose.yml up -d --build
+# Nếu lỡ tay chạy local worker, kill trước khi fresh restart:
+pkill -9 -f celery 2>/dev/null
 ```
