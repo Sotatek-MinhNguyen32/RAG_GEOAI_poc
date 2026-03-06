@@ -1,7 +1,5 @@
-from shared.core.es_client import es_client
-from shared.core.qdrant_client import qdrant_client
-
-from shared.core.config import settings
+from shared.clients import es_client, qdrant_client
+from shared.config import settings
 from qdrant_client.models import VectorParams, Distance
 
 
@@ -87,7 +85,7 @@ def init_qdrant():
     """Create Qdrant collection if not exists and validate vector size"""
     try:
         collection_name = settings.QDRANT_COLLECTION
-        vector_size = settings.QDRANT_COLLECTION_SIZE
+        vector_size = settings.EMBED_DIM
 
         collections = qdrant_client.get_collections()
         existing = next(
@@ -135,3 +133,6 @@ def main():
     print("Initializing Qdrant collection...")
     init_qdrant()
     print("Database initialization complete.")
+
+if __name__ == "__main__":
+    main()
