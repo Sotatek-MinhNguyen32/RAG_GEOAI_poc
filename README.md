@@ -19,6 +19,60 @@ curl -s http://localhost:9200/images_metadata/_count | python3 -c "import sys,js
 curl -s http://localhost:6333/collections/desc_embed | python3 -c "import sys,json; print('Qdrant:', json.load(sys.stdin)['result']['points_count'])"
 ```
 
+## Test Search Branches
+
+### Branch A - Semantic Search (Qdrant)
+
+Endpoint:
+- `POST http://localhost:8000/api/v1/search`
+
+Example:
+```bash
+curl --location 'http://localhost:8000/api/v1/search' \
+--header 'Content-Type: application/json' \
+--data '{
+  "query": "rice paddy near river",
+  "top_k": 5
+}'
+```
+
+What it does:
+- Embed query text via Embedding API
+- Search vector in Qdrant
+- Return Top-K semantic documents
+
+### Branch B - Lexical & Geo Search (Elasticsearch BM25)
+
+Endpoint:
+- `POST http://localhost:8000/api/v1/search/lexical`
+
+Example (keyword/BM25 only):
+```bash
+curl --location 'http://localhost:8000/api/v1/search/lexical' \
+--header 'Content-Type: application/json' \
+--data '{
+  "query": "rice paddy can tho",
+  "top_k": 5
+}'
+```
+
+Example (keyword + bounding box filter):
+```bash
+curl --location 'http://localhost:8000/api/v1/search/lexical' \
+--header 'Content-Type: application/json' \
+--data '{
+  "query": "rice paddy",
+  "top_k": 5,
+  "filters": {
+  }
+}'
+```
+
+What it does:
+- Run BM25 keyword search on Elasticsearch (`desc_text`)
+- Apply geo filter from `filters.bounding_box` when provided
+- Return Top-K lexical documents
+
 ---
 
 ## Folder Structure

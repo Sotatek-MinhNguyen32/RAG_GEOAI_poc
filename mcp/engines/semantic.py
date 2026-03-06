@@ -1,3 +1,4 @@
+    
 """Semantic search engine — Qdrant vector search."""
 from typing import List, Optional
 from shared.config import settings

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     EMBED_URL: str = Field(default="http://localhost:8001")
     EMBED_DIM: int = Field(default=2048)
     VLM_URL: str = Field(default="http://localhost:8002")
+    QUERY_PARSER_URL: str = Field(default="")
+    QUERY_PARSER_MODEL: str = Field(default="Qwen/Qwen3-VL-8B-Instruct")
     USE_MOCK: bool = Field(default=True)
 
     RRF_K: int = Field(default=60)
