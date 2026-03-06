@@ -1,19 +1,17 @@
 """Embedding Processor — call Jina v4 Embedding API."""
 from typing import List
 import httpx
-from shared.config import settings
 
 
 def get_embedding(text: str) -> List[float]:
     if not text:
         raise ValueError("Empty text input.")
 
-    url = f"{settings.EMBED_URL}/v1/embeddings"
+    url = "http://13.231.181.57:8000/v1/embeddings"
     payload = {
-        "model": "jina-embeddings-v3",
-        "input": text,
-        "task": "retrieval.index",
-        "dimensions": settings.EMBED_DIM,
+        "model": "jinaai/jina-embeddings-v4-vllm-retrieval",
+        "input": [text],
+        "encoding_format": "float",
     }
 
     with httpx.Client(timeout=30.0) as client:
@@ -23,5 +21,5 @@ def get_embedding(text: str) -> List[float]:
 
         vector = result.get("data", [{}])[0].get("embedding", [])
         if not vector:
-            raise RuntimeError("No vector returned from Embedding Server.")
+            raise RuntimeError("No vector returned from Jina API.")
         return vector
