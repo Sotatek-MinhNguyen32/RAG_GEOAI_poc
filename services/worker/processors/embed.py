@@ -1,13 +1,14 @@
 """Embedding Processor — call Jina v4 Embedding API."""
 from typing import List
 import httpx
+from shared.config import settings
 
 
 def get_embedding(text: str) -> List[float]:
     if not text:
         raise ValueError("Empty text input.")
 
-    url = "http://13.231.181.57:8000/v1/embeddings"
+    url = f"{settings.EMBED_URL}/v1/embeddings"
     payload = {
         "model": "jinaai/jina-embeddings-v4-vllm-retrieval",
         "input": [text],

@@ -4,6 +4,7 @@ import io
 import httpx
 from pathlib import Path
 from PIL import Image
+from shared.config import settings
 
 _PROMPT_DIR = Path(__file__).resolve().parent.parent / "prompts"
 _DEFAULT_PROMPT = "Describe this satellite image in detail suitable for search indexing."
@@ -49,7 +50,7 @@ def generate_description(image_bytes: bytes) -> str:
         "temperature": 1.0,
     }
 
-    url = "http://13.231.114.91:8001/v1/chat/completions"
+    url = f"{settings.VLM_URL}/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer dummy",
