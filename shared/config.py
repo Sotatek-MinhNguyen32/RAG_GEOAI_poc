@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379/0")
 
     S3_ENDPOINT: str = Field(default="http://localhost:9000")
+    S3_PUBLIC_URL: str = Field(default="http://localhost:9000")  # Public-facing URL for stored image links (always localhost for local dev)
     S3_ACCESS_KEY: str = Field(default="admin")
     S3_SECRET_KEY: str = Field(default="12345678")
     S3_BUCKET: str = Field(default="warehouse")

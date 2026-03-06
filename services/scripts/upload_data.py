@@ -1,5 +1,5 @@
 """Upload ./data folder to MinIO S3 bucket."""
-import os
+import json
 import sys
 from pathlib import Path
 from botocore.exceptions import ClientError
@@ -31,6 +31,23 @@ def upload_data():
             s3_client.create_bucket(Bucket=bucket)
         else:
             print(f"Warning checking bucket: {e}")
+
+    # Ensure bucket has public-read policy (for direct URL access from browser)
+    try:
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Sid": "PublicReadGetObject",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": f"arn:aws:s3:::{bucket}/*"
+            }]
+        }
+        s3_client.put_bucket_policy(Bucket=bucket, Policy=json.dumps(policy))
+        print(f"Bucket '{bucket}' public-read policy set")
+    except Exception as e:
+        print(f"Warning setting bucket policy: {e}")
 
     if not DATA_DIR.exists():
         print(f"Data directory not found: {DATA_DIR}")

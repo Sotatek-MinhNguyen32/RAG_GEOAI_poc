@@ -7,7 +7,8 @@ from shared.config import settings
 # Configure boto3 for MinIO compatibility
 # MinIO is S3-compatible but endpoint validation can be strict
 s3_config = Config(
-    retries={'max_attempts': 3}
+    retries={'max_attempts': 3},
+    s3={'addressing_style': 'path'},  # Force path-style: http://host/bucket/key (required for MinIO and non-AWS endpoints)
 )
 
 s3_client = boto3.client(

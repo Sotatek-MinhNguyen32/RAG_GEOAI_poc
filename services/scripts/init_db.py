@@ -13,24 +13,12 @@ def init_elasticsearch():
     client.indices.create(
         index=settings.ES_INDEX,
         body={
-            "settings": {"index": {"knn": True}},
             "mappings": {
                 "properties": {
                     # ===== BASIC =====
-                    "image_id": {"type": "keyword"},
-                    "description": {"type": "text", "analyzer": "standard"},
-                    "file_size_bytes": {"type": "long"},
+                    "id": {"type": "keyword"},
+                    "desc_text": {"type": "text", "analyzer": "standard"},
                     "url": {"type": "keyword"},
-                    # ===== VECTOR =====
-                    "description_vector": {
-                        "type": "knn_vector",
-                        "dimension": 1536,
-                        "method": {
-                            "name": "hnsw",
-                            "engine": "nmslib",
-                            "space_type": "cosinesimil",
-                        },
-                    },
                     # ===== GEO =====
                     "bounding_box": {"type": "geo_shape"},
                     # ===== METADATA =====
@@ -78,7 +66,7 @@ def init_elasticsearch():
         },
     )
 
-    print(f"Created production-ready index '{settings.ES_INDEX}'")
+    print(f"Created index '{settings.ES_INDEX}'")
 
 
 def init_qdrant():
