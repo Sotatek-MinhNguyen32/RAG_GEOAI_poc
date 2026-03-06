@@ -21,13 +21,22 @@ docker compose up -d          # khởi động ES, Qdrant, Redis, MinIO
 ## RUN FLOW (from data in root -> push data in Minio -> process -> store in ES + Qdrant)
 ```bash
 # Init databases (tạo ES index + Qdrant collection)
-python services/scripts/init_db.py
+conda run -n agent python services/scripts/init_db.py
 
 # Upload ảnh mẫu từ ./data lên MinIO
-python services/scripts/upload_data.py
+conda run -n agent python services/scripts/upload_data.py
 
 # Khởi động Celery worker (terminal riêng)
-celery -A services.worker.celery_app worker --loglevel=info
+conda run -n agent celery -A services.worker.celery_app worker --loglevel=info
+
+# Đẩy job xử lý toàn bộ ảnh (--limit để test nhanh)
+conda run -n agent python services/scripts/start_pipeline.py --limit 5
+```
+
+## Real APIs
+
+- **VLM (Qwen):** `http://13.231.114.91:8001/v1/chat/completions` → Image → Description
+- **Embedding (Jina):** `http://13.231.181.57:8000/v1/embeddings` → Text → 2048-dim vector
 
 # Đẩy job xử lý toàn bộ ảnh (--limit để test nhanh)
 python services/scripts/start_pipeline.py --limit 5
@@ -73,9 +82,7 @@ RAG_GEOAI_poc/
 │           ├── vlm.py               ← [Task #5] Gọi Qwen VLM → text description
 │           ├── embed.py             ← [Task #4] Gọi Jina API → embedding vector
 │           ├── index_service.py     ← [Task #7] Lưu doc vào Elasticsearch
-│           ├── qdrant_service.py    ← [Task #8] Upsert vector vào Qdrant
-│           ├── mock_vlm.py          ← Mock VLM (dùng khi chưa có server)
-│           └── mock_embed.py        ← Mock Embed (dùng khi chưa có server)
+│           └── qdrant_service.py    ← [Task #8] Upsert vector vào Qdrant
 │
 ├── mcp/                             ← Phase 2: Search server
 │   ├── controller.py                ← Entry point MCP server
@@ -112,8 +119,8 @@ RAG_GEOAI_poc/
 | Task | File cần code vào |
 |------|-------------------|
 | #2 — API S3 + tạo job | `services/api/v1/ingest.py` + `services/scripts/start_pipeline.py` |
-| #4 — Jina Embed client | `services/worker/processors/embed.py` *(chờ EC2 endpoint)* |
-| #5 — Qwen VLM client | `services/worker/processors/vlm.py` *(chờ GPU EC2 endpoint)* |
+| #4 — Jina Embed client | `services/worker/processors/embed.py` ✅ |
+| #5 — Qwen VLM client | `services/worker/processors/vlm.py` ✅ |
 | #7 — Index vào ES | `services/worker/processors/index_service.py` ✅ |
 | #10 — Lexical & Geo search | `mcp/engines/keyword.py` |
 
@@ -123,8 +130,9 @@ RAG_GEOAI_poc/
 | #3 — ES/OpenSearch config | `shared/core/` + `services/scripts/init_db.py` + `services/scripts/models/metadata_schema.py` ✅ |
 | #9 — Semantic search | `mcp/engines/semantic.py` |
 
-> **Lưu ý Task #4 & #5:** Hiện tại `mock_embed.py` và `mock_vlm.py` đang được dùng thay thế.
-> Khi khách cung cấp endpoint EC2, chỉ cần điền `EMBED_URL` và `VLM_URL` vào `.env` rồi đặt `USE_MOCK=False`.
+> **Task #4 & #5 lưu ý:** 
+> - **Jina Embedding:** Live tại http://13.231.181.57:8000/v1/embeddings (2048-dim vectors)
+> - **Qwen VLM:** Live tại http://13.231.114.91:8001/v1/chat/completions (image → text descriptions)
 
 ---
 
