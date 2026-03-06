@@ -33,7 +33,7 @@ async def handle_query(payload: Dict[str, Any]) -> dict:
 
     from mcp.engines.semantic import embed_query, search as semantic_search
     query_vector = embed_query(clean_query)
-    semantic_results = semantic_search(query_vector)
+    semantic_results = semantic_search(query_vector, top_k=top_k)
     logger.info("Semantic: %d results", len(semantic_results))
 
     from mcp.engines.keyword import search as keyword_search

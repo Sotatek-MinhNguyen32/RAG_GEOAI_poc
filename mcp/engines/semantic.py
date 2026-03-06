@@ -25,6 +25,8 @@ def search(query_vector: List[float], top_k: Optional[int] = None, score_thresho
                 id=payload.get("id", str(point.id)),
                 score=point.score,
                 url=payload.get("url"),
+                desc_text=payload.get("desc_text"),
+                metadata=payload.get("metadata"),
                 source="semantic",
             )
         )

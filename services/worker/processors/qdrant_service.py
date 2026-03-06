@@ -12,7 +12,7 @@ def _image_id_to_uuid(image_id: str) -> str:
     return str(uuid_lib.UUID(bytes=hashlib.md5(image_id.encode()).digest()[:16]))
 
 
-def upsert_vector(image_id: str, vector: List[float], url: str, collection: Optional[str] = None) -> None:
+def upsert_vector(image_id: str, vector: List[float], url: str, desc_text: str = "", collection: Optional[str] = None) -> None:
     collection = collection or settings.QDRANT_COLLECTION
     qdrant_client.upsert(
         collection_name=collection,
@@ -20,7 +20,7 @@ def upsert_vector(image_id: str, vector: List[float], url: str, collection: Opti
             PointStruct(
                 id=_image_id_to_uuid(image_id),
                 vector=vector,
-                payload={"id": image_id, "url": url},
+                payload={"id": image_id, "url": url, "desc_text": desc_text},
             )
         ],
     )

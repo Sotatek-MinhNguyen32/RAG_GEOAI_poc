@@ -8,7 +8,7 @@ from shared.config import settings
 
 
 def reciprocal_rank_fusion(*result_lists: List[SearchResult], k: Optional[int] = None) -> List[FusedResult]:
-    k = k or settings.RRF_K
+    rrf_k = k or settings.RRF_K
 
     rrf_scores: dict[str, float] = defaultdict(float)
     doc_data: dict[str, dict] = {}
@@ -16,7 +16,7 @@ def reciprocal_rank_fusion(*result_lists: List[SearchResult], k: Optional[int] =
 
     for result_list in result_lists:
         for rank, result in enumerate(result_list, start=1):
-            rrf_scores[result.id] += 1.0 / (k + rank)
+            rrf_scores[result.id] += 1.0 / (rrf_k + rank)
             doc_sources[result.id].add(result.source)
 
             existing = doc_data.get(result.id)
@@ -32,18 +32,20 @@ def reciprocal_rank_fusion(*result_lists: List[SearchResult], k: Optional[int] =
                 if result.url and not existing.get("url"):
                     existing["url"] = result.url
                 if result.metadata:
-                    merged = dict(result.metadata)
-                    merged.update(existing.get("metadata") or {})
-                    existing["metadata"] = merged
+                    current_meta = existing.get("metadata") or {}
+                    for key, val in result.metadata.items():
+                        if key not in current_meta:
+                            current_meta[key] = val
+                    existing["metadata"] = current_meta
 
     fused = []
-    for doc_id, rrf_score in rrf_scores.items():
+    for doc_id, score in rrf_scores.items():
         data = doc_data.get(doc_id, {})
         fused.append(
             FusedResult(
                 id=doc_id,
-                rrf_score=rrf_score,
-                final_score=rrf_score,
+                rrf_score=score,
+                final_score=score,
                 url=data.get("url"),
                 desc_text=data.get("desc_text"),
                 metadata=data.get("metadata"),

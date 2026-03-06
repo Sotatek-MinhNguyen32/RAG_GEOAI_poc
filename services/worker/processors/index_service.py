@@ -34,4 +34,4 @@ def sync_to_databases(
 
     es_client.index(index=settings.ES_INDEX, id=image_id, document=es_doc)
 
-    qdrant_service.upsert_vector(image_id=image_id, vector=vector, url=presigned_url)
+    qdrant_service.upsert_vector(image_id=image_id, vector=vector, url=presigned_url, desc_text=text_desc)

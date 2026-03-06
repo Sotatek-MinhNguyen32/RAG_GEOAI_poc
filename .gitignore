@@ -59,7 +59,7 @@ celerybeat.pid
 .cache/
 
 # ── Local mock files (chỉ dùng để test local, không push lên remote) ──
-**/mock_*.py
+# **/mock_*.py
 
 # ── Local README variant ──
 README.LOCAL.md
