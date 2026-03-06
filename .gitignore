@@ -47,7 +47,7 @@ docker-compose.override.yml
 # *.tiff
 # *.ovr
 # *.wld
-# data/
+data/
 
 # ── Celery ──
 celerybeat-schedule

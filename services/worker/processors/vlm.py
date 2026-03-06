@@ -36,7 +36,7 @@ def generate_description(image_bytes: bytes) -> str:
     prompt_text = _load_prompt()
 
     payload = {
-        "model": "Qwen/Qwen2-VL-7B-Instruct",
+        "model": "Qwen/Qwen3-VL-8B-Instruct",
         "messages": [
             {
                 "role": "user",
@@ -46,13 +46,17 @@ def generate_description(image_bytes: bytes) -> str:
                 ],
             }
         ],
-        "max_tokens": 1024,
-        "temperature": 0.1,
+        "max_tokens": 512,
+        "temperature": 1.0,
     }
 
-    url = settings.VLM_URL.rstrip("/") + "/v1/chat/completions"
+    url = f"{settings.VLM_URL}/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer dummy",
+    }
     with httpx.Client(timeout=120.0) as client:
-        resp = client.post(url, json=payload)
+        resp = client.post(url, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"]

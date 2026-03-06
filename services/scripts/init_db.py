@@ -1,7 +1,5 @@
-from shared.core.es_client import es_client
-from shared.core.qdrant_client import qdrant_client
-
-from shared.core.config import settings
+from shared.clients import es_client, qdrant_client
+from shared.config import settings
 from qdrant_client.models import VectorParams, Distance
 
 
@@ -15,24 +13,12 @@ def init_elasticsearch():
     client.indices.create(
         index=settings.ES_INDEX,
         body={
-            "settings": {"index": {"knn": True}},
             "mappings": {
                 "properties": {
                     # ===== BASIC =====
-                    "image_id": {"type": "keyword"},
-                    "description": {"type": "text", "analyzer": "standard"},
-                    "file_size_bytes": {"type": "long"},
+                    "id": {"type": "keyword"},
+                    "desc_text": {"type": "text", "analyzer": "standard"},
                     "url": {"type": "keyword"},
-                    # ===== VECTOR =====
-                    "description_vector": {
-                        "type": "knn_vector",
-                        "dimension": 1536,
-                        "method": {
-                            "name": "hnsw",
-                            "engine": "nmslib",
-                            "space_type": "cosinesimil",
-                        },
-                    },
                     # ===== GEO =====
                     "bounding_box": {"type": "geo_shape"},
                     # ===== METADATA =====
@@ -80,14 +66,14 @@ def init_elasticsearch():
         },
     )
 
-    print(f"Created production-ready index '{settings.ES_INDEX}'")
+    print(f"Created index '{settings.ES_INDEX}'")
 
 
 def init_qdrant():
     """Create Qdrant collection if not exists and validate vector size"""
     try:
         collection_name = settings.QDRANT_COLLECTION
-        vector_size = settings.QDRANT_COLLECTION_SIZE
+        vector_size = settings.EMBED_DIM
 
         collections = qdrant_client.get_collections()
         existing = next(
@@ -135,3 +121,6 @@ def main():
     print("Initializing Qdrant collection...")
     init_qdrant()
     print("Database initialization complete.")
+
+if __name__ == "__main__":
+    main()

@@ -1,7 +1,8 @@
 """Upload ./data folder to MinIO S3 bucket."""
-import os
+import json
 import sys
 from pathlib import Path
+from botocore.exceptions import ClientError
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
@@ -20,11 +21,33 @@ def should_upload(filename: str) -> bool:
 def upload_data():
     bucket = settings.S3_BUCKET
 
+    # Create bucket if not exists
     try:
         s3_client.head_bucket(Bucket=bucket)
-    except Exception:
-        s3_client.create_bucket(Bucket=bucket)
-        print(f"Created bucket '{bucket}'")
+        print(f"Bucket '{bucket}' exists")
+    except ClientError as e:
+        if e.response['Error']['Code'] == '404':
+            print(f"Creating bucket '{bucket}'...")
+            s3_client.create_bucket(Bucket=bucket)
+        else:
+            print(f"Warning checking bucket: {e}")
+
+    # Ensure bucket has public-read policy (for direct URL access from browser)
+    try:
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Sid": "PublicReadGetObject",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": f"arn:aws:s3:::{bucket}/*"
+            }]
+        }
+        s3_client.put_bucket_policy(Bucket=bucket, Policy=json.dumps(policy))
+        print(f"Bucket '{bucket}' public-read policy set")
+    except Exception as e:
+        print(f"Warning setting bucket policy: {e}")
 
     if not DATA_DIR.exists():
         print(f"Data directory not found: {DATA_DIR}")
@@ -42,11 +65,13 @@ def upload_data():
             s3_client.head_object(Bucket=bucket, Key=object_name)
             skipped += 1
             continue
-        except Exception:
-            pass
+        except ClientError as e:
+            if e.response['Error']['Code'] != '404':
+                print(f"  Warning checking {object_name}: {e}")
 
         with open(filepath, "rb") as f:
-            s3_client.upload_fileobj(f, bucket, object_name)
+            file_size = filepath.stat().st_size
+            s3_client.put_object(Bucket=bucket, Key=object_name, Body=f)
         print(f"  {object_name} ({filepath.stat().st_size:,} bytes)")
         uploaded += 1
 
@@ -56,7 +81,7 @@ def upload_data():
 def list_bucket():
     bucket = settings.S3_BUCKET
     response = s3_client.list_objects_v2(Bucket=bucket)
-    objects = response.get("Contents", [])
+    objects = response.get('Contents', [])
     print(f"\nBucket '{bucket}' contains {len(objects)} objects:")
     for obj in objects:
         print(f"  {obj['Key']:40s}  {obj['Size']:>10,} bytes")
