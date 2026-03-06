@@ -8,6 +8,12 @@ services:
       dockerfile: Dockerfile
     container_name: geo_api
     env_file: ../.env.docker
+    environment:
+      # Override localhost endpoints to Docker service names
+      S3_ENDPOINT: http://geo_minio:9000
+      ES_URL: http://geo_elasticsearch:9200
+      QDRANT_URL: http://geo_qdrant:6333
+      REDIS_URL: redis://geo_redis:6379/0
     ports: ["8000:8000"]
     depends_on:
       elasticsearch:
@@ -30,6 +36,12 @@ services:
     container_name: geo_worker
     command: ["celery", "-A", "services.worker.celery_app", "worker", "-l", "info", "--concurrency=2"]
     env_file: ../.env.docker
+    environment:
+      # Override localhost endpoints to Docker service names
+      S3_ENDPOINT: http://geo_minio:9000
+      ES_URL: http://geo_elasticsearch:9200
+      QDRANT_URL: http://geo_qdrant:6333
+      REDIS_URL: redis://geo_redis:6379/0
     depends_on:
       redis:
         condition: service_healthy

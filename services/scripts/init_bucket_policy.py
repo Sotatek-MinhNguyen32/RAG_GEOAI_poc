@@ -23,7 +23,7 @@ policy = {
 }
 
 try:
-    s3_client.put_bucket_policy(Bucket=settings.S3_BUCKET, Policy=json.dumps(policy))
+    s3_client.set_bucket_policy(settings.S3_BUCKET, json.dumps(policy))
     print(f"✅ Bucket policy set for '{settings.S3_BUCKET}' - public read access enabled")
 except Exception as e:
     print(f"❌ Error setting policy: {e}")

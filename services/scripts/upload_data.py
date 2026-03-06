@@ -21,10 +21,10 @@ def upload_data():
     bucket = settings.S3_BUCKET
 
     try:
-        s3_client.head_bucket(Bucket=bucket)
-    except Exception:
-        s3_client.create_bucket(Bucket=bucket)
-        print(f"Created bucket '{bucket}'")
+        if not s3_client.bucket_exists(bucket):
+            print(f"Bucket '{bucket}' exists")
+    except Exception as e:
+        print(f"Warning: {e}")
 
     if not DATA_DIR.exists():
         print(f"Data directory not found: {DATA_DIR}")
@@ -39,14 +39,15 @@ def upload_data():
     for filepath in files:
         object_name = filepath.name
         try:
-            s3_client.head_object(Bucket=bucket, Key=object_name)
+            s3_client.stat_object(bucket, object_name)
             skipped += 1
             continue
         except Exception:
             pass
 
         with open(filepath, "rb") as f:
-            s3_client.upload_fileobj(f, bucket, object_name)
+            file_size = filepath.stat().st_size
+            s3_client.put_object(bucket, object_name, f, length=file_size)
         print(f"  {object_name} ({filepath.stat().st_size:,} bytes)")
         uploaded += 1
 
@@ -55,13 +56,8 @@ def upload_data():
 
 def list_bucket():
     bucket = settings.S3_BUCKET
-    response = s3_client.list_objects_v2(Bucket=bucket)
-    objects = response.get("Contents", [])
-    print(f"\nBucket '{bucket}' contains {len(objects)} objects:")
-    for obj in objects:
-        print(f"  {obj['Key']:40s}  {obj['Size']:>10,} bytes")
-
-
-if __name__ == "__main__":
-    upload_data()
-    list_bucket()
+    objects = s3_client.list_objects(bucket, recursive=True)
+    obj_list = list(objects)
+    print(f"\nBucket '{bucket}' contains {len(obj_list)} objects:")
+    for obj in obj_list:
+        print(f"  {obj.object_name:40s}  {obj.size:>10,} bytes")

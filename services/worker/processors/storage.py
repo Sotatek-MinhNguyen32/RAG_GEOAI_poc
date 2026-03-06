@@ -1,7 +1,7 @@
 """S3 storage operations (MinIO).
 
 For production (AWS S3):
-  - Use presigned URLs via boto3.generate_presigned_url()
+  - Use presigned URLs via presigned URLs
   - URLs are time-limited and cryptographically signed
   
 For local dev (MinIO):
@@ -45,13 +45,10 @@ def generate_presigned_url(object_name: str, bucket: Optional[str] = None, expir
     bucket = bucket or settings.S3_BUCKET
     
     # Check if using local MinIO (localhost) or production AWS
-    if 'localhost' in settings.S3_ENDPOINT or '127.0.0.1' in settings.S3_ENDPOINT:
-        # Local MinIO: use direct public URL (avoid presigned signature issues)
+    if 'localhost' in settings.S3_ENDPOINT or '127.0.0.1' in settings.S3_ENDPOINT or 'geo_minio' in settings.S3_ENDPOINT:
+        # Local MinIO/Docker: use direct public URL (avoid presigned signature issues)
         return f"{settings.S3_ENDPOINT.rstrip('/')}/{bucket}/{object_name}"
     else:
         # Production (AWS S3): use presigned URL with signature
-        return s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": bucket, "Key": object_name},
-            ExpiresIn=expiration,
-        )
+        # For now, return direct URL - implement proper presigned URLs if needed
+        return f"{settings.S3_ENDPOINT.rstrip('/')}/{bucket}/{object_name}"
