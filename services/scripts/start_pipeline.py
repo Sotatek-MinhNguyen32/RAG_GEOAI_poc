@@ -12,7 +12,7 @@ from shared.config import settings
 from services.worker.celery_app import celery_app
 
 
-def list_images_from_s3(bucket: str = None) -> list[dict]:
+def list_images_from_s3(bucket: str | None = None) -> list[dict]:
     bucket = bucket or settings.S3_BUCKET
     response = s3_client.list_objects_v2(Bucket=bucket)
     objects = response.get("Contents", [])
@@ -40,7 +40,7 @@ def list_images_from_s3(bucket: str = None) -> list[dict]:
     return images
 
 
-def push_jobs(images: list[dict], bucket: str = None) -> list[str]:
+def push_jobs(images: list[dict], bucket: str | None = None) -> list[str]:
     from services.worker.tasks import process_image
 
     bucket = bucket or settings.S3_BUCKET

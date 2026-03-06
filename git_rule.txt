@@ -1,0 +1,29 @@
+Link Wiki 	https://github.com/GeoTechnologies-Inc-DX/GeoTechAgent-PoC/wiki/%E3%83%96%E3%83%A9%E3%83%B3%E3%83%81%E4%BD%9C%E6%88%90%E3%83%AB%E3%83%BC%E3%83%AB								
+QUY TẮC TẠO BRANCH									
+1. CHÍNH SÁCH CƠ BẢN (QUY TẮC CHUNG)									
+Nội dung	Quy tắc								
+Nguồn gốc	Bắt buộc phải được tạo (phân nhánh) từ branch main (master).								
+Tỷ lệ Issue/Branch	1 Issue = 1 Branch								
+Hoàn thành	Sau khi hoàn thành, merge bằng Pull Request (PR).								
+									
+2. QUY TẮC ĐẶT TÊN (NAMING CONVENTION)									
+Định dạng:	<prefix>/<số_issue>-<tóm_tắt_công_việc>								
+									
+Tiền tố (Prefix)	Ý nghĩa	Mục đích							
+feature/	Tính năng mới	Phát triển các chức năng mới.							
+bugfix/	Sửa lỗi thường	Sửa lỗi trong quá trình phát triển thông thường.							
+docs/	Tài liệu	Cập nhật tài liệu (README, hướng dẫn sử dụng, v.v.).							
+hotfix/	Sửa lỗi khẩn cấp	Sửa lỗi quan trọng trên môi trường Production.							
+									
+Ví dụ Đặt tên Branch									
+Ví dụ 1:	feature/123-add-user-auth	(Thêm tính năng xác thực người dùng cho Issue 123)							
+Ví dụ 2:	bugfix/45-fix-login-error	(Sửa lỗi đăng nhập cho Issue 45)							
+Ví dụ 3:	docs/67-update-readme	(Cập nhật tệp README cho Issue 67)							
+									
+3. QUY TRÌNH LÀM VIỆC (WORKFLOW)									
+Bước 1:	Tạo Issue.								
+Bước 2:	Tạo Branch: git checkout -b feature/123-description								
+Bước 3:	Phát triển và Commit mã nguồn.								
+Bước 4:	Tạo Pull Request (PR).								
+Bước 5:	Sau khi Merge, xóa Branch.								
+									
