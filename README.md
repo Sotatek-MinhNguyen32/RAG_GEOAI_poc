@@ -19,9 +19,13 @@ docker compose up -d          # khởi động ES, Qdrant, Redis, MinIO
 ```
 
 ## RUN FLOW (from data in root -> push data in Minio -> process -> store in ES + Qdrant)
+
 ```bash
 # Init databases (tạo ES index + Qdrant collection)
 conda run -n agent python services/scripts/init_db.py
+
+# Init MinIO bucket policy (cho phép public view ảnh)
+conda run -n agent python services/scripts/init_bucket_policy.py
 
 # Upload ảnh mẫu từ ./data lên MinIO
 conda run -n agent python services/scripts/upload_data.py
@@ -32,6 +36,10 @@ conda run -n agent celery -A services.worker.celery_app worker --loglevel=info
 # Đẩy job xử lý toàn bộ ảnh (--limit để test nhanh)
 conda run -n agent python services/scripts/start_pipeline.py --limit 5
 ```
+
+> **Qdrant sẽ show ảnh:** 
+> - URL format: `http://localhost:9000/warehouse/{image_id}`
+> - Được lưu trong Qdrant payload → có thể click xem ảnh trực tiếp
 
 ## Real APIs
 
@@ -82,7 +90,9 @@ RAG_GEOAI_poc/
 │           ├── vlm.py               ← [Task #5] Gọi Qwen VLM → text description
 │           ├── embed.py             ← [Task #4] Gọi Jina API → embedding vector
 │           ├── index_service.py     ← [Task #7] Lưu doc vào Elasticsearch
-│           └── qdrant_service.py    ← [Task #8] Upsert vector vào Qdrant
+│           ├── qdrant_service.py    ← [Task #8] Upsert vector vào Qdrant
+│           ├── mock_vlm.py          ← Mock VLM (dùng khi chưa có server)
+│           └── mock_embed.py        ← Mock Embed (dùng khi chưa có server)
 │
 ├── mcp/                             ← Phase 2: Search server
 │   ├── controller.py                ← Entry point MCP server
@@ -133,6 +143,7 @@ RAG_GEOAI_poc/
 > **Task #4 & #5 lưu ý:** 
 > - **Jina Embedding:** Live tại http://13.231.181.57:8000/v1/embeddings (2048-dim vectors)
 > - **Qwen VLM:** Live tại http://13.231.114.91:8001/v1/chat/completions (image → text descriptions)
+> - Local: `mock_embed.py` + `mock_vlm.py` có sẵn nếu cần fallback (giữ ở `.gitignore`, không push lên)
 
 ---
 
